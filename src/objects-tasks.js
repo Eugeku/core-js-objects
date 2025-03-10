@@ -296,8 +296,17 @@ function sortCitiesArray(arr) {
  *    "Poland" => ["Lodz"]
  *   }
  */
-function group(/* array, keySelector, valueSelector */) {
-  throw new Error('Not implemented');
+function group(array, keySelector, valueSelector) {
+  return array.reduce((acc, item) => {
+    const key = keySelector(item);
+    const value = valueSelector(item);
+
+    if (!acc.has(key)) {
+      acc.set(key, []);
+    }
+    acc.get(key).push(value);
+    return acc;
+  }, new Map());
 }
 
 /**
@@ -355,32 +364,75 @@ function group(/* array, keySelector, valueSelector */) {
  */
 
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  value: '',
+  position: 0,
+
+  elementFlag: false,
+  idFlag: false,
+  pseudoFlag: false,
+
+  element(value) {
+    return this.appendSelector('element', value, 1, 'elementFlag');
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    return this.appendSelector('id', `#${value}`, 2, 'idFlag');
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    return this.appendSelector('class', `.${value}`, 3);
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    return this.appendSelector('attr', `[${value}]`, 4);
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    return this.appendSelector('pseudoClass', `:${value}`, 5);
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    const objWithValue = this.appendSelector(
+      'pseudoElement',
+      `::${value}`,
+      6,
+      'pseudoFlag'
+    );
+    return objWithValue;
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  stringify() {
+    const { value } = this;
+    this.value = '';
+    return value;
+  },
+
+  combine(selector1, combinator, selector2) {
+    this.value = `${selector1.stringify()} ${combinator} ${selector2.stringify()}`;
+    return this;
+  },
+
+  appendSelector(elementName, value, position, existingSelector) {
+    if (this.position > position) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    } else if (
+      (elementName === 'element' && this.elementFlag) ||
+      (elementName === 'id' && this.idFlag) ||
+      (elementName === 'pseudoElement' && this.pseudoFlag)
+    ) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    const object = Object.create(this);
+    if (existingSelector !== undefined || existingSelector !== null) {
+      object[existingSelector] = true;
+    }
+    object.value += value;
+    object.position = position;
+    return object;
   },
 };
 
